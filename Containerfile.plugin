@@ -1,0 +1,158 @@
+# Copyright 2021 Red Hat
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# ------------------------------------------------------------------------
+
+####################################################################################################
+# Argo CD UI stage
+####################################################################################################
+FROM rhacm2/yarn-builder:rhel_8_nodejs_18_yarn_builder as argocd-ui
+
+USER root
+RUN dnf upgrade -y && dnf install -y python2 make gcc gcc-c++
+
+RUN if [ -f /usr/etc/npmrc ]; then sed -i 's/python3/python2/g' /usr/etc/npmrc; fi && \
+    if [ -f /etc/npmrc ]; then sed -i 's/python3/python2/g' /etc/npmrc; fi    
+
+COPY . . 
+WORKDIR $PWD/node_gyp_headers/app
+RUN mkdir -p /root/.cache/node-gyp/18.8.0 && \
+    cp -r . /root/.cache/node-gyp/18.8.0/
+
+WORKDIR $PWD/argo_cd/app/ui
+
+RUN yarn install --no-progress --non-interactive
+
+ARG ARGO_VERSION=latest
+ENV ARGO_VERSION=$ARGO_VERSION
+RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn build
+
+####################################################################################################
+# Argo CD Build stage which performs the actual build of Argo CD binaries
+####################################################################################################
+FROM openshift/golang-builder:rhel_8_golang_1.22 as argocd-build
+
+COPY . .
+WORKDIR $PWD/argo_cd/app
+
+ENV GOFLAGS="-mod=mod"
+
+ARG EXTRA_BUILD_INFO='{Vendor Information: Red Hat OpenShift GitOps version: 1.16.0}'
+
+# Perform the build
+COPY --from=argocd-ui $PWD/argo_cd/app/ui/dist/app ui/dist/app
+RUN source $PWD/argo_cd/cachito.env && make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
+
+ARG BUILD_ALL_CLIS=false
+RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
+    source $PWD/argo_cd/cachito.env && make CLI_NAME=argocd-darwin-amd64 GOOS=darwin GOARCH=amd64 cli-local && \
+    source $PWD/argo_cd/cachito.env && make CLI_NAME=argocd-windows-amd64.exe GOOS=windows GOARCH=amd64 cli-local \
+    ; fi
+
+# build kustomize
+WORKDIR $PWD/kustomize/app
+RUN source $PWD/kustomize/cachito.env && \
+go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
+-X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -o kustomize/kustomize ./kustomize
+
+# build helm
+WORKDIR $PWD/helm/app
+RUN source $PWD/helm/cachito.env &&  go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
+-X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" ./cmd/helm
+
+# build tini
+WORKDIR $PWD/tini/app
+ENV CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
+RUN yum install -y cmake && cmake . && make tini
+
+# build connect-proxy
+WORKDIR $PWD/ssh_connect/app
+RUN yum install -y gcc sed && sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && gcc connect.c -o connect-proxy
+
+####################################################################################################
+# Final image
+####################################################################################################
+####################################################################################################
+# Argo CD Base - used as the base for both the release and dev argocd images
+####################################################################################################
+FROM registry.access.redhat.com/ubi8/ubi-minimal AS argocd-base
+
+USER root
+RUN microdnf install shadow-utils -y
+
+RUN groupadd -g 999 argocd && \
+    useradd -l -r -u 999 -g argocd -d /home/argocd argocd && \
+    mkdir -p /home/argocd && \
+    chown argocd:0 /home/argocd && \
+    chmod g=u /home/argocd && \
+    microdnf update && \
+    microdnf install -y git git-lfs gpg tar tzdata && \
+    microdnf clean all && \
+    rm -rf /tmp/* /var/tmp/*
+
+COPY $PWD/argo_cd/app/hack/gpg-wrapper.sh /usr/local/bin/gpg-wrapper.sh
+COPY $PWD/argo_cd/app/hack/git-verify-wrapper.sh /usr/local/bin/git-verify-wrapper.sh
+
+COPY $PWD/argo_cd/app/entrypoint.sh /usr/local/bin/entrypoint.sh
+# keep uid_entrypoint.sh for backward compatibility
+RUN ln -s /usr/local/bin/entrypoint.sh /usr/local/bin/uid_entrypoint.sh
+
+# support for mounting configuration from a configmap
+RUN mkdir -p /app/config/ssh && \
+    touch /app/config/ssh/ssh_known_hosts && \
+    ln -s /app/config/ssh/ssh_known_hosts /etc/ssh/ssh_known_hosts 
+
+RUN mkdir -p /app/config/tls
+RUN mkdir -p /app/config/gpg/source && \
+    mkdir -p /app/config/gpg/keys && \
+    chown argocd /app/config/gpg/keys && \
+    chmod 0700 /app/config/gpg/keys
+
+# workaround ksonnet issue https://github.com/ksonnet/ksonnet/issues/298
+ENV USER=argocd
+
+WORKDIR /home/argocd
+
+COPY --from=argocd-build $PWD/argo_cd/app/dist/argocd /usr/local/bin/
+RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-server
+RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-repo-server
+RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-cmp-server
+RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-application-controller
+RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-dex
+RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-notifications
+RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-applicationset-controller
+RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-k8s-auth
+
+USER 999
+COPY --from=argocd-build  $PWD/kustomize/app/kustomize/kustomize /usr/local/bin/
+COPY --from=argocd-build  $PWD/helm/app/helm /usr/local/bin/
+COPY --from=argocd-build  $PWD/tini/app/tini /usr/local/bin/
+COPY --from=argocd-build  $PWD/ssh_connect/app/connect-proxy /usr/local/bin/connect-proxy
+
+LABEL \
+    name="openshift-gitops-1/argocd-rhel8" \
+    version=${CI_CONTAINER_VERSION} \
+    License="Apache 2.0" \
+    com.redhat.component="openshift-gitops-argocd-container" \
+    com.redhat.delivery.appregistry="false" \
+    release=${CI_CONTAINER_RELEASE} \
+    upstream-version=${CI_UPSTREAM_VERSION} \
+    upstream-vcs-ref="${CI_ARGO_CD_UPSTREAM_COMMIT}" \
+    upstream-vcs-type="git" \
+    summary="Red Hat Openshift GitOps Argo CD" \
+    io.openshift.expose-services="" \
+    io.openshift.tags="openshift,gitops,argocd" \
+    io.k8s.display-name="openshift-gitops-argocd" \
+    maintainer="William Tam <wtam@redhat.com>" \
+    description="Red Hat Openshift GitOps Argo CD"
