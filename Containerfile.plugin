@@ -17,7 +17,7 @@
 ####################################################################################################
 # Argo CD UI stage
 ####################################################################################################
-FROM registry-proxy.engineering.redhat.com/rh-osbs/rhacm2-yarn-builder:rhel_8_nodejs_18_yarn_builder as argocd-ui
+FROM registry.redhat.io/rh-osbs/rhacm2-yarn-builder:rhel_8_nodejs_18_yarn_builder as argocd-ui
 
 USER root
 RUN dnf upgrade -y && dnf install -y python2 make gcc gcc-c++
