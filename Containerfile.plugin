@@ -17,7 +17,7 @@
 ####################################################################################################
 # Argo CD UI stage
 ####################################################################################################
-FROM rhacm2/yarn-builder:rhel_8_nodejs_18_yarn_builder as argocd-ui
+FROM registry-proxy.engineering.redhat.com/rh-osbs/rhacm2-yarn-builder:rhel_8_nodejs_18_yarn_builder as argocd-ui
 
 USER root
 RUN dnf upgrade -y && dnf install -y python2 make gcc gcc-c++
@@ -41,7 +41,7 @@ RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn build
 ####################################################################################################
 # Argo CD Build stage which performs the actual build of Argo CD binaries
 ####################################################################################################
-FROM openshift/golang-builder:rhel_8_golang_1.22 as argocd-build
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_golang_1.22 as argocd-build
 
 COPY . .
 WORKDIR $PWD/argo_cd/app
