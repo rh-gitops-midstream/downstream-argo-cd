@@ -20,20 +20,14 @@
 FROM registry.access.redhat.com/ubi9/nodejs-18:1-118.1724037695 AS argocd-ui
 
 USER root
-RUN dnf upgrade -y && dnf install -y python2 make gcc gcc-c++
+RUN dnf upgrade -y && dnf install -y python3 make gcc gcc-c++
 
 # Install Yarn
 RUN npm install --global yarn
 
-RUN if [ -f /usr/etc/npmrc ]; then sed -i 's/python3/python2/g' /usr/etc/npmrc; fi && \
-    if [ -f /etc/npmrc ]; then sed -i 's/python3/python2/g' /etc/npmrc; fi    
+COPY . .
 
-COPY . . 
-WORKDIR $PWD/node_gyp_headers/app
-RUN mkdir -p /root/.cache/node-gyp/18.8.0 && \
-    cp -r . /root/.cache/node-gyp/18.8.0/
-
-WORKDIR $PWD/argo_cd/app/ui
+WORKDIR argo-cd/ui
 
 RUN yarn install --no-progress --non-interactive
 
