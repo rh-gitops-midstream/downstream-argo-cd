@@ -27,7 +27,7 @@ RUN npm install --global yarn
 
 COPY . .
 
-WORKDIR argo-cd/ui
+WORKDIR argo_cd/ui
 
 RUN yarn install --no-progress --non-interactive
 
@@ -41,15 +41,15 @@ RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn build
 FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_golang_1.22 as argocd-build
 
 COPY . .
-WORKDIR $PWD/argo_cd/app
+WORKDIR argo_cd/app
 
 ENV GOFLAGS="-mod=mod"
 
 ARG EXTRA_BUILD_INFO='{Vendor Information: Red Hat OpenShift GitOps version: 1.16.0}'
 
 # Perform the build
-COPY --from=argocd-ui $PWD/argo_cd/app/ui/dist/app ui/dist/app
-RUN source $PWD/argo_cd/cachito.env && make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
+COPY --from=argocd-ui argo_cd/ui/dist/app ui/dist/app
+RUN source argo_cd/cachito.env && make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
 
 ARG BUILD_ALL_CLIS=false
 RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
@@ -58,23 +58,23 @@ RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
     ; fi
 
 # build kustomize
-WORKDIR $PWD/kustomize/app
-RUN source $PWD/kustomize/cachito.env && \
+WORKDIR kustomize/app
+RUN source kustomize/cachito.env && \
 go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
 -X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -o kustomize/kustomize ./kustomize
 
 # build helm
-WORKDIR $PWD/helm/app
-RUN source $PWD/helm/cachito.env &&  go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
+WORKDIR helm/app
+RUN source helm/cachito.env &&  go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
 -X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" ./cmd/helm
 
 # build tini
-WORKDIR $PWD/tini/app
+WORKDIR tini/app
 ENV CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
 RUN yum install -y cmake && cmake . && make tini
 
 # build connect-proxy
-WORKDIR $PWD/ssh_connect/app
+WORKDIR ssh_connect/app
 RUN yum install -y gcc sed && sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && gcc connect.c -o connect-proxy
 
 ####################################################################################################
@@ -98,8 +98,8 @@ RUN groupadd -g 999 argocd && \
     microdnf clean all && \
     rm -rf /tmp/* /var/tmp/*
 
-COPY $PWD/argo_cd/app/hack/gpg-wrapper.sh /usr/local/bin/gpg-wrapper.sh
-COPY $PWD/argo_cd/app/hack/git-verify-wrapper.sh /usr/local/bin/git-verify-wrapper.sh
+COPY argo_cd/app/hack/gpg-wrapper.sh /usr/local/bin/gpg-wrapper.sh
+COPYk argo_cd/app/hack/git-verify-wrapper.sh /usr/local/bin/git-verify-wrapper.sh
 
 COPY $PWD/argo_cd/app/entrypoint.sh /usr/local/bin/entrypoint.sh
 # keep uid_entrypoint.sh for backward compatibility
