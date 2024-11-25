@@ -17,6 +17,8 @@ metadata:
   namespace: rh-openshift-gitops-tenant
 spec:
   params:
+  - name: prefetch-input
+    value: '{"type": "generic", "path": "."}'
   - name: git-url
     value: '{{source_url}}'
   - name: revision
