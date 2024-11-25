@@ -1,0 +1,7 @@
+---
+metadata:
+  version: "1.0"
+artifacts:
+  - download_url: "https://github.com/rh-gitops-midstream/helm/archive/refs/tags/v3.14.3.zip"
+    checksum: "sha256:bc91dc36f6fb4b697b4c32021067476ff2774afd"
+    filename: "helm-3.14.3"
