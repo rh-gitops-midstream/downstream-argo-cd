@@ -19,7 +19,9 @@ metadata:
 spec:
   params:
   - name: prefetch-input
-    value: '{"type": "generic", "path": "."}'
+    value: '{"type": "gomod", "path": "helm"}'
+  - name: prefetch-input
+    value: '{"type": "gomod", "path": "kustomize"}'
   - name: git-url
     value: '{{source_url}}'
   - name: revision
