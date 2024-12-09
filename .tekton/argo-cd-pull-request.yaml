@@ -18,8 +18,8 @@ metadata:
   namespace: rh-openshift-gitops-tenant
 spec:
   params:
-  - name: prefetch-input
-    value: '{"type": "gomod", "path": "helm"}'
+#  - name: prefetch-input
+#    value: '{"type": "gomod", "path": "helm"}'
   - name: prefetch-input
     value: '{"type": "gomod", "path": "kustomize"}'
   - name: git-url
