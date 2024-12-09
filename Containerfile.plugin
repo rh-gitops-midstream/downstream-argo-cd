@@ -27,7 +27,7 @@ RUN npm install --global yarn
 
 COPY . .
 
-WORKDIR argo_cd/ui
+WORKDIR argo-cd/ui
 
 RUN yarn install --no-progress --non-interactive
 
@@ -41,20 +41,20 @@ RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn build
 FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_golang_1.22 as argocd-build
 
 COPY . .
-WORKDIR argo_cd/app
+WORKDIR argo-cd/app
 
 ENV GOFLAGS="-mod=mod"
 
 ARG EXTRA_BUILD_INFO='{Vendor Information: Red Hat OpenShift GitOps version: 1.16.0}'
 
 # Perform the build
-COPY --from=argocd-ui argo_cd/ui/dist/app ui/dist/app
-RUN source argo_cd/cachito.env && make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
+COPY --from=argocd-ui argo-cd/ui/dist/app ui/dist/app
+RUN source argo-cd/cachito.env && make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
 
 ARG BUILD_ALL_CLIS=false
 RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
-    source $PWD/argo_cd/cachito.env && make CLI_NAME=argocd-darwin-amd64 GOOS=darwin GOARCH=amd64 cli-local && \
-    source $PWD/argo_cd/cachito.env && make CLI_NAME=argocd-windows-amd64.exe GOOS=windows GOARCH=amd64 cli-local \
+    source $PWD/argo-cd/cachito.env && make CLI_NAME=argocd-darwin-amd64 GOOS=darwin GOARCH=amd64 cli-local && \
+    source $PWD/argo-cd/cachito.env && make CLI_NAME=argocd-windows-amd64.exe GOOS=windows GOARCH=amd64 cli-local \
     ; fi
 
 # build kustomize
@@ -98,10 +98,10 @@ RUN groupadd -g 999 argocd && \
     microdnf clean all && \
     rm -rf /tmp/* /var/tmp/*
 
-COPY argo_cd/app/hack/gpg-wrapper.sh /usr/local/bin/gpg-wrapper.sh
-COPYk argo_cd/app/hack/git-verify-wrapper.sh /usr/local/bin/git-verify-wrapper.sh
+COPY argo-cd/app/hack/gpg-wrapper.sh /usr/local/bin/gpg-wrapper.sh
+COPY argo-cd/app/hack/git-verify-wrapper.sh /usr/local/bin/git-verify-wrapper.sh
 
-COPY $PWD/argo_cd/app/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY $PWD/argo-cd/app/entrypoint.sh /usr/local/bin/entrypoint.sh
 # keep uid_entrypoint.sh for backward compatibility
 RUN ln -s /usr/local/bin/entrypoint.sh /usr/local/bin/uid_entrypoint.sh
 
@@ -121,7 +121,7 @@ ENV USER=argocd
 
 WORKDIR /home/argocd
 
-COPY --from=argocd-build $PWD/argo_cd/app/dist/argocd /usr/local/bin/
+COPY --from=argocd-build $PWD/argo-cd/app/dist/argocd /usr/local/bin/
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-server
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-repo-server
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-cmp-server
