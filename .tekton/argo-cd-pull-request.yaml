@@ -18,6 +18,10 @@ metadata:
   namespace: rh-openshift-gitops-tenant
 spec:
   params:
+  - name: config-file-content
+    value: |
+      requests_timeout: 300
+      subprocess_timeout: 3600
 #  - name: prefetch-input
 #    value: '{"type": "gomod", "path": "helm"}'
   - name: prefetch-input
