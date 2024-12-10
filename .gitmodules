@@ -1,9 +1,10 @@
 [submodule "argo-cd"]
 	path = argo-cd
 	url = https://github.com/argoproj/argo-cd.git
-[submodule "helm"]
-	path = helm
-	url = https://github.com/helm/helm/
 [submodule "kustomize"]
 	path = kustomize
 	url = https://github.com/kubernetes-sigs/kustomize
+[submodule "helm"]
+	path = helm
+	url = https://github.com/rh-gitops-midstream/helm.git
+	branch = v3.14.0
