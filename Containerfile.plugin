@@ -153,3 +153,5 @@ LABEL \
     io.k8s.display-name="openshift-gitops-argocd" \
     maintainer="William Tam <wtam@redhat.com>" \
     description="Red Hat Openshift GitOps Argo CD"
+
+
