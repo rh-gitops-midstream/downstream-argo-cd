@@ -7,4 +7,4 @@
 [submodule "helm"]
 	path = helm
 	url = https://github.com/rh-gitops-midstream/helm.git
-	branch = v3.14.0
+	branch = konflux
