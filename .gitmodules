@@ -4,7 +4,3 @@
 [submodule "kustomize"]
 	path = kustomize
 	url = https://github.com/kubernetes-sigs/kustomize
-[submodule "helm"]
-	path = helm
-	url = https://github.com/rh-gitops-midstream/helm.git
-	branch = konflux
