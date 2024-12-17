@@ -65,23 +65,23 @@ RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
     ; fi
 
 # build kustomize
-WORKDIR kustomize/app
+WORKDIR /go/src/github.com/argoproj/kustomize
 RUN go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
 -X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -o kustomize/kustomize ./kustomize
 
 # build helm
-WORKDIR helm/app
-RUN go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
--X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" ./cmd/helm
+#WORKDIR helm/app
+#RUN go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
+#-X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" ./cmd/helm
 
 # build tini
-WORKDIR tini/app
-ENV CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
-RUN yum install -y cmake && cmake . && make tini
+#WORKDIR tini/app
+#ENV CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
+#RUN yum install -y cmake && cmake . && make tini
 
 # build connect-proxy
-WORKDIR ssh_connect/app
-RUN yum install -y gcc sed && sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && gcc connect.c -o connect-proxy
+#WORKDIR ssh_connect/app
+#RUN yum install -y gcc sed && sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && gcc connect.c -o connect-proxy
 
 ####################################################################################################
 # Final image
