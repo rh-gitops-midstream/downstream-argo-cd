@@ -22,10 +22,8 @@ spec:
     value: |
       requests_timeout: 300
       subprocess_timeout: 3600
-#  - name: prefetch-input
-#    value: '{"type": "gomod", "path": "helm"}'
   - name: prefetch-input
-    value: '[{"type": "gomod", "path": "kustomize/kustomize"}, {"type": "gomod", "path": "./argo-cd"}'
+    value: '[{"type": "gomod", "path": "kustomize/kustomize"}, {"type": "gomod", "path": "./argo-cd"}]'
   - name: git-url
     value: '{{source_url}}'
   - name: revision
