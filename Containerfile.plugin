@@ -104,10 +104,10 @@ RUN groupadd -g 999 argocd && \
     microdnf clean all && \
     rm -rf /tmp/* /var/tmp/*
 
-COPY argo-cd/app/hack/gpg-wrapper.sh /usr/local/bin/gpg-wrapper.sh
-COPY argo-cd/app/hack/git-verify-wrapper.sh /usr/local/bin/git-verify-wrapper.sh
+COPY argo-cd/hack/gpg-wrapper.sh /usr/local/bin/gpg-wrapper.sh
+COPY argo-cd/hack/git-verify-wrapper.sh /usr/local/bin/git-verify-wrapper.sh
 
-COPY $PWD/argo-cd/app/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY argo-cd/entrypoint.sh /usr/local/bin/entrypoint.sh
 # keep uid_entrypoint.sh for backward compatibility
 RUN ln -s /usr/local/bin/entrypoint.sh /usr/local/bin/uid_entrypoint.sh
 
@@ -127,7 +127,7 @@ ENV USER=argocd
 
 WORKDIR /home/argocd
 
-COPY --from=argocd-build $PWD/argo-cd/app/dist/argocd /usr/local/bin/
+COPY --from=argocd-build /go/src/github.com/argoproj/argo-cd/dist/argocd /usr/local/bin/
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-server
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-repo-server
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-cmp-server
@@ -138,10 +138,10 @@ RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-applicationset-controller
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-k8s-auth
 
 USER 999
-COPY --from=argocd-build  $PWD/kustomize/app/kustomize/kustomize /usr/local/bin/
-COPY --from=argocd-build  $PWD/helm/app/helm /usr/local/bin/
-COPY --from=argocd-build  $PWD/tini/app/tini /usr/local/bin/
-COPY --from=argocd-build  $PWD/ssh_connect/app/connect-proxy /usr/local/bin/connect-proxy
+COPY --from=argocd-build  /go/src/github.com/argoproj/argo-cd/kustomize/kustomize /usr/local/bin/
+#COPY --from=argocd-build  $PWD/helm/app/helm /usr/local/bin/
+#COPY --from=argocd-build  $PWD/tini/app/tini /usr/local/bin/
+#COPY --from=argocd-build  $PWD/ssh_connect/app/connect-proxy /usr/local/bin/connect-proxy
 
 LABEL \
     name="openshift-gitops-1/argocd-rhel8" \
