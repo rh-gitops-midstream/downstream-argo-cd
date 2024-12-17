@@ -27,12 +27,12 @@ RUN npm install --global yarn
 
 WORKDIR /src
 
-COPY ["ui/package.json", "ui/yarn.lock", "./"]
+COPY ["argo-cd/ui/package.json", "argo-cd/ui/yarn.lock", "./"]
 
 RUN yarn install --network-timeout 200000 && \
     yarn cache clean
 
-COPY ["ui/", "."]
+COPY ["argo-cd/ui/", "."]
 
 RUN yarn install --no-progress --non-interactive
 
@@ -45,8 +45,10 @@ RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn build
 ####################################################################################################
 FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_golang_1.22 as argocd-build
 
-WORKDIR /go/src/github.com/argoproj/argo-cd
+WORKDIR /go/src/github.com/argoproj/
 COPY . .
+
+WORKDIR /go/src/github.com/argoproj/argo-cd
 
 ENV GOFLAGS="-mod=mod"
 
@@ -54,23 +56,22 @@ ARG EXTRA_BUILD_INFO='{Vendor Information: Red Hat OpenShift GitOps version: 1.1
 
 # Perform the build
 COPY --from=argocd-ui /src/dist/app /go/src/github.com/argoproj/argo-cd/ui/dist/app
-RUN source argo-cd/cachito.env && make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
+RUN make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
 
 ARG BUILD_ALL_CLIS=false
 RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
-    source $PWD/argo-cd/cachito.env && make CLI_NAME=argocd-darwin-amd64 GOOS=darwin GOARCH=amd64 cli-local && \
-    source $PWD/argo-cd/cachito.env && make CLI_NAME=argocd-windows-amd64.exe GOOS=windows GOARCH=amd64 cli-local \
+    make CLI_NAME=argocd-darwin-amd64 GOOS=darwin GOARCH=amd64 cli-local && \
+    make CLI_NAME=argocd-windows-amd64.exe GOOS=windows GOARCH=amd64 cli-local \
     ; fi
 
 # build kustomize
 WORKDIR kustomize/app
-RUN source kustomize/cachito.env && \
-go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
+RUN go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
 -X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -o kustomize/kustomize ./kustomize
 
 # build helm
 WORKDIR helm/app
-RUN source helm/cachito.env &&  go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
+RUN go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
 -X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" ./cmd/helm
 
 # build tini
