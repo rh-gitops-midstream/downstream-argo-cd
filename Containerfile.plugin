@@ -67,7 +67,7 @@ RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
 # build kustomize
 WORKDIR /go/src/github.com/argoproj/kustomize
 RUN go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
--X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -o kustomize/kustomize ./kustomize
+-X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -o kustomize ./kustomize
 
 # build helm
 #WORKDIR helm/app
@@ -138,7 +138,7 @@ RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-applicationset-controller
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-k8s-auth
 
 USER 999
-COPY --from=argocd-build  /go/src/github.com/argoproj/argo-cd/kustomize/kustomize /usr/local/bin/
+COPY --from=argocd-build  /go/src/github.com/argoproj/kustomize/kustomize /usr/local/bin/
 #COPY --from=argocd-build  $PWD/helm/app/helm /usr/local/bin/
 #COPY --from=argocd-build  $PWD/tini/app/tini /usr/local/bin/
 #COPY --from=argocd-build  $PWD/ssh_connect/app/connect-proxy /usr/local/bin/connect-proxy
