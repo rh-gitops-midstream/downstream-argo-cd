@@ -48,7 +48,7 @@ ENV GOFLAGS="-mod=mod"
 ARG EXTRA_BUILD_INFO='{Vendor Information: Red Hat OpenShift GitOps version: 1.16.0}'
 
 # Perform the build
-COPY --from=argocd-ui argo-cd/ui/dist/app ui/dist/app
+COPY --from=argocd-ui /argo-cd/ui/dist/app ui/dist/app
 RUN source argo-cd/cachito.env && make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
 
 ARG BUILD_ALL_CLIS=false
