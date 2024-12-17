@@ -25,9 +25,14 @@ RUN dnf upgrade -y && dnf install -y python3 make gcc gcc-c++
 # Install Yarn
 RUN npm install --global yarn
 
-COPY . .
+WORKDIR /src
 
-WORKDIR argo-cd/ui
+COPY ["ui/package.json", "ui/yarn.lock", "./"]
+
+RUN yarn install --network-timeout 200000 && \
+    yarn cache clean
+
+COPY ["ui/", "."]
 
 RUN yarn install --no-progress --non-interactive
 
@@ -40,15 +45,15 @@ RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn build
 ####################################################################################################
 FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_golang_1.22 as argocd-build
 
+WORKDIR /go/src/github.com/argoproj/argo-cd
 COPY . .
-WORKDIR argo-cd/app
 
 ENV GOFLAGS="-mod=mod"
 
 ARG EXTRA_BUILD_INFO='{Vendor Information: Red Hat OpenShift GitOps version: 1.16.0}'
 
 # Perform the build
-COPY --from=argocd-ui /argo-cd/ui/dist/app ui/dist/app
+COPY --from=argocd-ui /src/dist/app /go/src/github.com/argoproj/argo-cd/ui/dist/app
 RUN source argo-cd/cachito.env && make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
 
 ARG BUILD_ALL_CLIS=false
