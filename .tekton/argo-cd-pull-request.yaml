@@ -25,7 +25,7 @@ spec:
 #  - name: prefetch-input
 #    value: '{"type": "gomod", "path": "helm"}'
   - name: prefetch-input
-    value: '{"type": "gomod", "path": "kustomize/kustomize"}'
+    value: '[{"type": "gomod", "path": "kustomize/kustomize"}, {"type": "gomod", "path": "./argo-cd"}'
   - name: git-url
     value: '{{source_url}}'
   - name: revision
