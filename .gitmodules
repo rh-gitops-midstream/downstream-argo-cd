@@ -4,3 +4,6 @@
 [submodule "kustomize"]
 	path = kustomize
 	url = https://github.com/kubernetes-sigs/kustomize
+[submodule "tini"]
+	path = tini
+	url = https://github.com/krallin/tini
