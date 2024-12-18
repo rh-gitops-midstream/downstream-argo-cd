@@ -7,3 +7,6 @@
 [submodule "tini"]
 	path = tini
 	url = https://github.com/krallin/tini
+[submodule "ssh-connect"]
+	path = ssh-connect
+	url = https://github.com/gotoh/ssh-connect
