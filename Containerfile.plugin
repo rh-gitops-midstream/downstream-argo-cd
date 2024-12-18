@@ -77,11 +77,14 @@ RUN go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/
 # build tini
 #WORKDIR tini/app
 #ENV CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
-#RUN yum install -y cmake && cmake . && make tini
+#RUN yum install -y cmake
+#RUN cmake . && make tini
 
 # build connect-proxy
 WORKDIR /go/src/github.com/argoproj/ssh-connect
-RUN yum install -y gcc sed && sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && gcc connect.c -o connect-proxy
+RUN yum install -y gcc sed 
+RUN sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && \
+    gcc connect.c -o connect-proxy
 
 ####################################################################################################
 # Final image
