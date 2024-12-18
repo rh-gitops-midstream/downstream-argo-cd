@@ -80,8 +80,8 @@ RUN go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/
 #RUN yum install -y cmake && cmake . && make tini
 
 # build connect-proxy
-#WORKDIR ssh_connect/app
-#RUN yum install -y gcc sed && sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && gcc connect.c -o connect-proxy
+WORKDIR /go/src/github.com/argoproj/ssh-connect
+RUN yum install -y gcc sed && sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && gcc connect.c -o connect-proxy
 
 ####################################################################################################
 # Final image
@@ -141,7 +141,7 @@ USER 999
 COPY --from=argocd-build  /go/src/github.com/argoproj/kustomize/kustomize /usr/local/bin/
 #COPY --from=argocd-build  $PWD/helm/app/helm /usr/local/bin/
 #COPY --from=argocd-build  $PWD/tini/app/tini /usr/local/bin/
-#COPY --from=argocd-build  $PWD/ssh_connect/app/connect-proxy /usr/local/bin/connect-proxy
+COPY --from=argocd-build  /go/src/github.com/argoproj/ssh_connect/connect-proxy /usr/local/bin/connect-proxy
 
 LABEL \
     name="openshift-gitops-1/argocd-rhel8" \
