@@ -83,8 +83,8 @@ RUN go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/
 # build connect-proxy
 WORKDIR /go/src/github.com/argoproj/ssh-connect
 RUN yum install -y gcc sed 
-RUN sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && \
-    gcc connect.c -o connect-proxy
+RUN sed -i 's/SOCKLEN_T/socklen_t/g' connect.c
+RUN gcc connect.c -o connect-proxy
 
 ####################################################################################################
 # Final image
