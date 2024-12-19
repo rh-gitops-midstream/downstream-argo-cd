@@ -10,3 +10,6 @@
 [submodule "ssh-connect"]
 	path = ssh-connect
 	url = https://github.com/gotoh/ssh-connect
+[submodule "helm"]
+	path = helm
+	url = https://github.com/helm/helm

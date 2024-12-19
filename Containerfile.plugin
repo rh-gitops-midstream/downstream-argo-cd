@@ -70,20 +70,19 @@ RUN go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/
 -X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -o kustomize ./kustomize
 
 # build helm
-#WORKDIR helm/app
-#RUN go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
-#-X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" ./cmd/helm
+WORKDIR /go/src/github.com/argoproj/helm
+RUN go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
+-X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" ./cmd/helm
 
 # build tini
-#WORKDIR tini/app
-#ENV CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
-#RUN yum install -y cmake
-#RUN cmake . && make tini
+WORKDIR /go/src/github.com/argoproj/tini
+ENV CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
+RUN yum install -y cmake
+RUN cmake . && make tini
 
 # build connect-proxy
-WORKDIR /go/src/github.com/argoproj/ssh-connect
-RUN yum install -y connect-proxy
-
+#WORKDIR /go/src/github.com/argoproj/ssh-connect
+#RUN yum install -y gcc sed && sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && gcc connect.c -o connect-proxy
 ####################################################################################################
 # Final image
 ####################################################################################################
@@ -140,9 +139,9 @@ RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-k8s-auth
 
 USER 999
 COPY --from=argocd-build  /go/src/github.com/argoproj/kustomize/kustomize /usr/local/bin/
-#COPY --from=argocd-build  $PWD/helm/app/helm /usr/local/bin/
-#COPY --from=argocd-build  $PWD/tini/app/tini /usr/local/bin/
-COPY --from=argocd-build  /go/src/github.com/argoproj/ssh_connect/connect-proxy /usr/local/bin/connect-proxy
+COPY --from=argocd-build  /go/src/github.com/argoproj/helm/helm /usr/local/bin/
+COPY --from=argocd-build  /go/src/github.com/argoproj/tini/tini /usr/local/bin/
+#COPY --from=argocd-build  /go/src/github.com/argoproj/ssh_connect/connect-proxy /usr/local/bin/connect-proxy
 
 LABEL \
     name="openshift-gitops-1/argocd-rhel8" \
