@@ -25,9 +25,14 @@ RUN dnf upgrade -y && dnf install -y python3 make gcc gcc-c++
 # Install Yarn
 RUN npm install --global yarn
 
-COPY . .
+WORKDIR /src
 
-WORKDIR argo_cd/ui
+COPY ["argo-cd/ui/package.json", "argo-cd/ui/yarn.lock", "./"]
+
+RUN yarn install --network-timeout 200000 && \
+    yarn cache clean
+
+COPY ["argo-cd/ui/", "."]
 
 RUN yarn install --no-progress --non-interactive
 
@@ -40,43 +45,46 @@ RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn build
 ####################################################################################################
 FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_golang_1.22 as argocd-build
 
+WORKDIR /go/src/github.com/argoproj/
 COPY . .
-WORKDIR argo_cd/app
+
+WORKDIR /go/src/github.com/argoproj/argo-cd
 
 ENV GOFLAGS="-mod=mod"
 
 ARG EXTRA_BUILD_INFO='{Vendor Information: Red Hat OpenShift GitOps version: 1.16.0}'
 
 # Perform the build
-COPY --from=argocd-ui argo_cd/ui/dist/app ui/dist/app
-RUN source argo_cd/cachito.env && make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
+COPY --from=argocd-ui /src/dist/app /go/src/github.com/argoproj/argo-cd/ui/dist/app
+RUN make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
 
 ARG BUILD_ALL_CLIS=false
 RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
-    source $PWD/argo_cd/cachito.env && make CLI_NAME=argocd-darwin-amd64 GOOS=darwin GOARCH=amd64 cli-local && \
-    source $PWD/argo_cd/cachito.env && make CLI_NAME=argocd-windows-amd64.exe GOOS=windows GOARCH=amd64 cli-local \
+    make CLI_NAME=argocd-darwin-amd64 GOOS=darwin GOARCH=amd64 cli-local && \
+    make CLI_NAME=argocd-windows-amd64.exe GOOS=windows GOARCH=amd64 cli-local \
     ; fi
 
 # build kustomize
-WORKDIR kustomize/app
-RUN source kustomize/cachito.env && \
-go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
--X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -o kustomize/kustomize ./kustomize
+WORKDIR /go/src/github.com/argoproj/kustomize
+RUN go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
+-X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -o kustomize ./kustomize
 
 # build helm
-WORKDIR helm/app
-RUN source helm/cachito.env &&  go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
+WORKDIR /go/src/github.com/argoproj/helm
+RUN go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
 -X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" ./cmd/helm
 
 # build tini
-WORKDIR tini/app
+WORKDIR /go/src/github.com/argoproj/tini
 ENV CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
-RUN yum install -y cmake && cmake . && make tini
+RUN yum install -y cmake
+RUN cmake . && make tini
 
 # build connect-proxy
-WORKDIR ssh_connect/app
-RUN yum install -y gcc sed && sed -i 's/SOCKLEN_T/socklen_t/g' connect.c && gcc connect.c -o connect-proxy
-
+WORKDIR /go/src/github.com/argoproj/ssh-connect
+RUN yum install -y gcc sed 
+RUN sed -i 's/SOCKLEN_T/socklen_t/g' connect.c 
+RUN gcc -v connect.c -o connect-proxy
 ####################################################################################################
 # Final image
 ####################################################################################################
@@ -98,10 +106,10 @@ RUN groupadd -g 999 argocd && \
     microdnf clean all && \
     rm -rf /tmp/* /var/tmp/*
 
-COPY argo_cd/app/hack/gpg-wrapper.sh /usr/local/bin/gpg-wrapper.sh
-COPYk argo_cd/app/hack/git-verify-wrapper.sh /usr/local/bin/git-verify-wrapper.sh
+COPY argo-cd/hack/gpg-wrapper.sh /usr/local/bin/gpg-wrapper.sh
+COPY argo-cd/hack/git-verify-wrapper.sh /usr/local/bin/git-verify-wrapper.sh
 
-COPY $PWD/argo_cd/app/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY argo-cd/entrypoint.sh /usr/local/bin/entrypoint.sh
 # keep uid_entrypoint.sh for backward compatibility
 RUN ln -s /usr/local/bin/entrypoint.sh /usr/local/bin/uid_entrypoint.sh
 
@@ -121,7 +129,7 @@ ENV USER=argocd
 
 WORKDIR /home/argocd
 
-COPY --from=argocd-build $PWD/argo_cd/app/dist/argocd /usr/local/bin/
+COPY --from=argocd-build /go/src/github.com/argoproj/argo-cd/dist/argocd /usr/local/bin/
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-server
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-repo-server
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-cmp-server
@@ -132,10 +140,10 @@ RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-applicationset-controller
 RUN ln -s /usr/local/bin/argocd /usr/local/bin/argocd-k8s-auth
 
 USER 999
-COPY --from=argocd-build  $PWD/kustomize/app/kustomize/kustomize /usr/local/bin/
-COPY --from=argocd-build  $PWD/helm/app/helm /usr/local/bin/
-COPY --from=argocd-build  $PWD/tini/app/tini /usr/local/bin/
-COPY --from=argocd-build  $PWD/ssh_connect/app/connect-proxy /usr/local/bin/connect-proxy
+COPY --from=argocd-build  /go/src/github.com/argoproj/kustomize/kustomize /usr/local/bin/
+COPY --from=argocd-build  /go/src/github.com/argoproj/helm/helm /usr/local/bin/
+COPY --from=argocd-build  /go/src/github.com/argoproj/tini/tini /usr/local/bin/
+COPY --from=argocd-build  /go/src/github.com/argoproj/ssh_connect/connect-proxy /usr/local/bin/connect-proxy
 
 LABEL \
     name="openshift-gitops-1/argocd-rhel8" \
@@ -153,3 +161,5 @@ LABEL \
     io.k8s.display-name="openshift-gitops-argocd" \
     maintainer="William Tam <wtam@redhat.com>" \
     description="Red Hat Openshift GitOps Argo CD"
+
+

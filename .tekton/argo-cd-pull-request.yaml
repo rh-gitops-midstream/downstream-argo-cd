@@ -18,10 +18,12 @@ metadata:
   namespace: rh-openshift-gitops-tenant
 spec:
   params:
+  - name: config-file-content
+    value: |
+      requests_timeout: 300
+      subprocess_timeout: 3600
   - name: prefetch-input
-    value: '{"type": "gomod", "path": "helm"}'
-  - name: prefetch-input
-    value: '{"type": "gomod", "path": "kustomize"}'
+    value: '[{"type": "gomod", "path": "./argo-cd"}, {"type": "gomod", "path": "kustomize/kustomize"}, {"type": "gomod", "path": "./helm"}]'
   - name: git-url
     value: '{{source_url}}'
   - name: revision
@@ -159,6 +161,8 @@ spec:
         value: $(params.output-image).git
       - name: ociArtifactExpiresAfter
         value: $(params.image-expires-after)
+      - name: enableSymlinkCheck
+        value: false
       runAfter:
       - init
       taskRef:
