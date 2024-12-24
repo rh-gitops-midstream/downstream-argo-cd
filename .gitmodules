@@ -1,15 +1,9 @@
 [submodule "argo-cd"]
 	path = argo-cd
 	url = https://github.com/argoproj/argo-cd.git
+[submodule "helm"]
+	path = helm
+	url = https://github.com/helm/helm/
 [submodule "kustomize"]
 	path = kustomize
 	url = https://github.com/kubernetes-sigs/kustomize
-[submodule "tini"]
-	path = tini
-	url = https://github.com/krallin/tini
-[submodule "ssh-connect"]
-	path = ssh-connect
-	url = https://github.com/gotoh/ssh-connect
-[submodule "helm"]
-	path = helm
-	url = https://github.com/helm/helm
