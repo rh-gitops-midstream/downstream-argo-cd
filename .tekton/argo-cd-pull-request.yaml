@@ -23,7 +23,7 @@ spec:
       requests_timeout: 300
       subprocess_timeout: 3600
   - name: prefetch-input
-    value: '[{"type": "gomod", "path": "./argo-cd"}, {"type": "gomod", "path": "kustomize/kustomize"}, {"type": "gomod", "path": "./helm"}]'
+    value: '[{"type": "gomod", "path": "./argo-cd"}, {"type": "yarn", "path": "./argo-cd/ui"}, {"type": "gomod", "path": "kustomize/kustomize"}, {"type": "gomod", "path": "./helm"}]'
   - name: git-url
     value: '{{source_url}}'
   - name: revision
@@ -86,7 +86,7 @@ spec:
       description: Skip checks against built image
       name: skip-checks
       type: string
-    - default: "false"
+    - default: "true"
       description: Execute the build with network isolation
       name: hermetic
       type: string
