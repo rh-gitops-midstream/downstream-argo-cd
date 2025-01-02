@@ -143,6 +143,8 @@ spec:
         value: $(params.output-image).git
       - name: ociArtifactExpiresAfter
         value: $(params.image-expires-after)
+      - name: dockerfile
+        value: containerfile.cli.plugin
       runAfter:
       - init
       taskRef:
