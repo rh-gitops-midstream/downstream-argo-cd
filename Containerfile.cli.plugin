@@ -20,20 +20,22 @@
 FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_golang_1.22 AS argo-cd-cli-build
 
 # Set the working directory for the build
-WORKDIR /go/src/github.com/argoproj/argo-cd
+WORKDIR /go/src/github.com/argoproj/
 
 # Set the user to the default non-root user provided by UBI
 USER root
 
-# Copy only go.mod and go.sum files to optimize build caching
-COPY argo-cd/go.mod argo-cd/go.sum ./
-RUN go mod download
-
 # Copy the project files, including the .git directory
 COPY . .
 
+# Set the working directory for the build
+WORKDIR /go/src/github.com/argoproj/argo-cd/
+
+#download dependency
+RUN go mod download
+
 # Build the plugins for multiple platforms
-RUN cd argo-cd && go mod vendor 
+RUN go mod vendor 
 RUN make GIT_TAG="v$(cat VERSION)" GOFLAGS="-mod=mod" BIN_NAME=argocd-darwin-amd64 GOOS=darwin GOARCH=amd64 argocd-all          && \
     make GIT_TAG="v$(cat VERSION)" GOFLAGS="-mod=mod" BIN_NAME=argocd-darwin-arm64 GOOS=darwin GOARCH=arm64 argocd-all          && \
     make GIT_TAG="v$(cat VERSION)" GOFLAGS="-mod=mod" BIN_NAME=argocd-linux-amd64 GOOS=linux GOARCH=amd64 argocd-all            && \
@@ -57,14 +59,14 @@ USER 999
 WORKDIR /releases
 
 # Copy the built plugin binaries into the final image
-COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/argo-cd/dist/argocd-darwin-amd64 /releases
-COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/argo-cd/dist/argocd-darwin-arm64 /releases
-COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/argo-cd/dist/argocd-linux-amd64 /releases
-COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/argo-cd/dist/argocd-linux-arm64 /releases
-COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/argo-cd/dist/argocd-windows-arm64.exe /releases
-COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/argo-cd/dist/argocd-windows-amd64.exe /releases
-COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/argo-cd/dist/argocd-linux-ppc64le /releases
-COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/argo-cd/dist/argocd-linux-s390x /releases
+COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/dist/argocd-darwin-amd64 /releases
+COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/dist/argocd-darwin-arm64 /releases
+COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/dist/argocd-linux-amd64 /releases
+COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/dist/argocd-linux-arm64 /releases
+COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/dist/argocd-windows-arm64.exe /releases
+COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/dist/argocd-windows-amd64.exe /releases
+COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/dist/argocd-linux-ppc64le /releases
+COPY --from=argo-cd-cli-build /go/src/github.com/argoproj/argo-cd/dist/argocd-linux-s390x /releases
 
 
 # Add required labels
