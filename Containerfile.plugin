@@ -82,7 +82,8 @@ RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
 # build kustomize
 WORKDIR /go/src/github.com/argoproj/kustomize
 RUN GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
--X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -tags strictfipsruntime -o kustomize/kustomize ./kustomize
+-X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+-tags strictfipsruntime -o kustomize ./kustomize
 
 # build helm
 WORKDIR /go/src/github.com/argoproj/helm
@@ -104,7 +105,8 @@ RUN gcc -v connect.c -o connect-proxy
 # build git-lfs
 WORKDIR /go/src/github.com/argoproj/git-lfs
 RUN source ${REMOTE_SOURCES_DIR}/git-lfs/cachito.env && GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 \
- go build -ldflags="-w -s -X 'github.com/git-lfs/git-lfs/v3/config.Vendor=Red Hat Inc' -X github.com/git-lfs/git-lfs/v3/config.GitCommit=${CI_GIT_LFS_UPSTREAM_TAG}" \
+ go build -ldflags="-w -s -X 'github.com/git-lfs/git-lfs/v3/config.Vendor=Red Hat Inc' \
+ -X github.com/git-lfs/git-lfs/v3/config.GitCommit=${CI_GIT_LFS_UPSTREAM_TAG}" \
  -gcflags="" -tags strictfipsruntime -trimpath  -o ./bin/git-lfs ./git-lfs.go
 
 ####################################################################################################
