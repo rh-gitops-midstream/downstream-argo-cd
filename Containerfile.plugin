@@ -17,7 +17,7 @@
 ####################################################################################################
 # Argo CD UI stage
 ####################################################################################################
-FROM registry.access.redhat.com/ubi9/nodejs-18:1-118.1724037695 AS argocd-ui
+FROM registry.access.redhat.com/ubi9/nodejs-18:9.5-1739782539 AS argocd-ui
 
 USER root
 RUN dnf upgrade -y && dnf install -y python3 make gcc gcc-c++
