@@ -16,4 +16,3 @@
 [submodule "git-lfs"]
 	path = git-lfs
 	url = https://github.com/git-lfs/git-lfs
-	branch = release-3.0
