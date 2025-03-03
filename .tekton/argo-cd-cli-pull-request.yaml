@@ -152,6 +152,8 @@ spec:
         value: $(params.image-expires-after)
       - name: enableSymlinkCheck
         value: false
+      - name: fetchTags
+        value: "true"
       runAfter:
       - init
       taskRef:
@@ -159,7 +161,7 @@ spec:
         - name: name
           value: git-clone-oci-ta
         - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-git-clone-oci-ta:0.1@sha256:8ab0c7a7ac4a4c59740a24304e17cc64fe8745376d19396c4660fc0e1a957a1b
+          value: quay.io/konflux-ci/tekton-catalog/task-git-clone-oci-ta:0.1@sha256:944e7698434862d7d295b69718accf01b0e0cbeccd44b6d68d65e67f14b97d82
         - name: kind
           value: task
         resolver: bundles
