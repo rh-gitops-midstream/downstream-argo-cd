@@ -23,6 +23,8 @@ spec:
     value: '{"type": "gomod", "path": "kustomize"}'
   - name: prefetch-input
     value: '{"type": "gomod", "path": "git-lfs"}'
+  - name: prefetch-input
+    value: '{"type": "rpm", "path": "."}'
   - name: git-url
     value: '{{source_url}}'
   - name: revision
@@ -34,6 +36,8 @@ spec:
     - linux/x86_64
   - name: dockerfile
     value: Containerfile.plugin
+  - name: prefetch-dev-package-managers-enabled
+    value: "true"
   pipelineSpec:
     description: |
       This pipeline is ideal for building multi-arch container images from a Containerfile while maintaining trust after pipeline customization.
