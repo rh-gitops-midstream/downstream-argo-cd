@@ -20,7 +20,7 @@
 FROM registry.access.redhat.com/ubi8/nodejs-18:1-136.1739758167 AS argocd-ui
 
 USER root
-RUN dnf upgrade -y && dnf install -y python3 make gcc gcc-c++
+RUN dnf upgrade -y && dnf install -y python3 make
 
 # Install Yarn
 RUN npm install --global yarn

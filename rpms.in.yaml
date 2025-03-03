@@ -8,8 +8,6 @@ contentOrigin:
 packages:
   - python3
   - make
-  - gcc
-  - gcc-c++
   - shadow-utils
   - git
   - gpg
