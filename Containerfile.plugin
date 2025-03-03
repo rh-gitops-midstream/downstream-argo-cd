@@ -17,7 +17,7 @@
 ####################################################################################################
 # Argo CD UI stage
 ####################################################################################################
-FROM registry.access.redhat.com/ubi9/nodejs-18:1-118.1724037695 AS argocd-ui
+FROM registry.access.redhat.com/ubi8/nodejs-18:1-118.1724037695 AS argocd-ui
 
 USER root
 RUN dnf upgrade -y && dnf install -y python3 make gcc gcc-c++
@@ -126,7 +126,7 @@ RUN groupadd -g 999 argocd && \
     chown argocd:0 /home/argocd && \
     chmod g=u /home/argocd && \
     microdnf update && \
-    microdnf install -y git git-lfs gpg tar tzdata && \
+    microdnf install -y git gpg tar tzdata && \
     microdnf clean all && \
     rm -rf /tmp/* /var/tmp/*
 
