@@ -6,8 +6,6 @@ contentOrigin:
   repofiles:
     - ubi8.repo
 packages:
-  - python3
-  - make
   - shadow-utils
   - git
   - gpg
