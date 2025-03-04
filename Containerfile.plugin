@@ -23,7 +23,7 @@ USER root
 RUN dnf upgrade -y && dnf install -y python3 make
 
 # Install Yarn
-RUN command -v yarn || npm i -g yarn
+RUN npm install -g /cachi2/output/deps/generic/yarn-v1.22.22.tgz
 
 WORKDIR /src
 
