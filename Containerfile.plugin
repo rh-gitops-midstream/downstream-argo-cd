@@ -33,7 +33,7 @@ COPY ["argo-cd/ui/", "."]
 
 ARG ARGO_VERSION=latest
 ENV ARGO_VERSION=$ARGO_VERSION
-RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn install --offline --frozen-lockfile --ignore-scripts && yarn build
+RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn install --offline --frozen-lockfile --ignore-scripts --no-progress --non-interactive && yarn build
 
 ####################################################################################################
 # Argo CD Build stage which performs the actual build of Argo CD binaries
