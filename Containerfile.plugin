@@ -82,7 +82,7 @@ RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
 WORKDIR /go/src/github.com/argoproj/kustomize
 RUN GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
 -X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
--tags strictfipsruntime -o kustomize ./kustomize
+-tags strictfipsruntime -o kustomize ./kustomize/main.go
 
 # build helm
 WORKDIR /go/src/github.com/argoproj/helm
@@ -166,8 +166,7 @@ USER 999
 COPY --from=argocd-build  /go/src/github.com/argoproj/kustomize/kustomize /usr/local/bin/
 COPY --from=argocd-build  /go/src/github.com/argoproj/helm/helm /usr/local/bin/
 COPY --from=argocd-build  /go/src/github.com/argoproj/tini/tini /usr/local/bin/
-# TODO: connect-proxy is not copied due to some issue.
-# COPY --from=argocd-build  /go/src/github.com/argoproj/ssh_connect/connect-proxy /usr/local/bin/connect-proxy
+COPY --from=argocd-build  /go/src/github.com/argoproj/ssh_connect/connect-proxy /usr/local/bin/connect-proxy
 COPY --from=argocd-build  /go/src/github.com/argoproj/git-lfs/bin/git-lfs /usr/local/bin/
 
 LABEL \
