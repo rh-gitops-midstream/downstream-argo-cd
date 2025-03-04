@@ -103,7 +103,7 @@ RUN gcc -v connect.c -o connect-proxy
 
 # build git-lfs
 WORKDIR /go/src/github.com/argoproj/git-lfs
-RUN source ${REMOTE_SOURCES_DIR}/git-lfs/cachito.env && GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 \
+RUN GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 \
  go build -ldflags="-w -s -X 'github.com/git-lfs/git-lfs/v3/config.Vendor=Red Hat Inc' \
  -X github.com/git-lfs/git-lfs/v3/config.GitCommit=${CI_GIT_LFS_UPSTREAM_TAG}" \
  -gcflags="" -tags strictfipsruntime -trimpath  -o ./bin/git-lfs ./git-lfs.go
