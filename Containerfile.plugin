@@ -23,22 +23,17 @@ USER root
 RUN dnf upgrade -y && dnf install -y python3 make
 
 # Install Yarn
-RUN npm install --global yarn
+RUN command -v yarn || npm i -g yarn
 
 WORKDIR /src
 
 COPY ["argo-cd/ui/package.json", "argo-cd/ui/yarn.lock", "./"]
 
-RUN yarn install --network-timeout 200000 && \
-    yarn cache clean
-
 COPY ["argo-cd/ui/", "."]
-
-RUN yarn install --no-progress --non-interactive
 
 ARG ARGO_VERSION=latest
 ENV ARGO_VERSION=$ARGO_VERSION
-RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn build
+RUN NODE_ONLINE_ENV='offline' NODE_ENV='production' yarn install --offline --frozen-lockfile --ignore-scripts && yarn build
 
 ####################################################################################################
 # Argo CD Build stage which performs the actual build of Argo CD binaries
