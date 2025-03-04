@@ -18,13 +18,7 @@ metadata:
 spec:
   params:
   - name: prefetch-input
-    value: '{"type": "gomod", "path": "helm"}'
-  - name: prefetch-input
-    value: '{"type": "gomod", "path": "kustomize"}'
-  - name: prefetch-input
-    value: '{"type": "gomod", "path": "git-lfs"}'
-  - name: prefetch-input
-    value: '{"type": "rpm", "path": "."}'
+    value: '[{"type": "gomod", "path": "./argo-cd"}, {"type": "yarn", "path": "./argo-cd/ui"}, {"type": "gomod", "path": "./kustomize/kustomize"}, {"type": "gomod", "path": "./helm"}, {"type": "gomod", "path": "./git-lfs"}, {"type": "rpm", "path": "."}]'
   - name: git-url
     value: '{{source_url}}'
   - name: revision
@@ -250,7 +244,7 @@ spec:
         - name: name
           value: buildah-remote-oci-ta
         - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-buildah-remote-oci-ta:0.2@sha256:0701fda689f7a8aa723aaffb4527e15782598f4268a6b505225d2a38db9897cf
+          value: quay.io/konflux-ci/tekton-catalog/task-buildah-remote-oci-ta:0.4@sha256:3e01d3870212cfa0a5f947abcd74348adb80591a2f0828c64bb29323dff7225d
         - name: kind
           value: task
         resolver: bundles
