@@ -1,18 +1,23 @@
 [submodule "argo-cd"]
 	path = argo-cd
 	url = https://github.com/argoproj/argo-cd.git
+	branch = release-2.14
 [submodule "kustomize"]
 	path = kustomize
 	url = https://github.com/kubernetes-sigs/kustomize
+	branch = release-kustomize-v5.4.3
 [submodule "tini"]
 	path = tini
 	url = https://github.com/krallin/tini
+	branch = master
 [submodule "ssh-connect"]
 	path = ssh-connect
 	url = https://github.com/gotoh/ssh-connect
+	branch = master
 [submodule "helm"]
 	path = helm
 	url = https://github.com/helm/helm
+	branch = release-3.16
 [submodule "git-lfs"]
 	path = git-lfs
 	url = https://github.com/git-lfs/git-lfs
