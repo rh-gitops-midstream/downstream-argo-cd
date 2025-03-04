@@ -17,13 +17,12 @@
 ####################################################################################################
 # Argo CD UI stage
 ####################################################################################################
-FROM registry.access.redhat.com/ubi9/nodejs-18:1-118.1724037695 AS argocd-ui
+FROM registry.access.redhat.com/ubi8/nodejs-18:1-136.1739758167 AS argocd-ui
 
 USER root
-RUN dnf upgrade -y && dnf install -y python3 make gcc gcc-c++
 
 # Install Yarn
-RUN npm install --global yarn
+RUN npm install --global /cachi2/output/deps/yarn-classic/yarn-1.22.22.tgz
 
 WORKDIR /src
 
@@ -34,7 +33,7 @@ RUN yarn install --network-timeout 200000 && \
 
 COPY ["argo-cd/ui/", "."]
 
-RUN yarn install --no-progress --non-interactive
+RUN yarn install --no-progress --non-interactive --offline
 
 ARG ARGO_VERSION=latest
 ENV ARGO_VERSION=$ARGO_VERSION
@@ -56,7 +55,22 @@ ARG EXTRA_BUILD_INFO='{Vendor Information: Red Hat OpenShift GitOps version: 1.1
 
 # Perform the build
 COPY --from=argocd-ui /src/dist/app /go/src/github.com/argoproj/argo-cd/ui/dist/app
-RUN make GIT_COMMIT=${CI_ARGO_CD_UPSTREAM_COMMIT} EXTRA_BUILD_INFO="${EXTRA_BUILD_INFO}" cli-local server controller repo-server
+RUN export PACKAGE=github.com/argoproj/argo-cd/v2/common &&\
+export VERSION=$(cat VERSION) &&\
+export BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') &&\
+export KUBECTL_VER=$(go list -m k8s.io/client-go | head -n 1 | rev | cut -d' ' -f1 | rev) &&\
+export GOEXPERIMENT=strictfipsruntime &&\
+export CGO_ENABLED=1 &&\
+export GODEBUG="tarinsecurepath=0,zipinsecurepath=0" &&\
+export LDFLAGS="-X ${PACKAGE}.version=${VERSION} \
+  -X ${PACKAGE}.buildDate=${BUILD_DATE} \
+  -X ${PACKAGE}.gitCommit=${CI_ARGO_CD_UPSTREAM_COMMIT} \
+  -X ${PACKAGE}.gitTreeState=clean \
+  -X ${PACKAGE}.kubectlVersion=${KUBECTL_VER}\
+  -X \"${PACKAGE}.extraBuildInfo=${EXTRA_BUILD_INFO}\" \
+  -X ${PACKAGE}.gitTag=${CI_ARGO_CD_UPSTREAM_TAG}" &&\
+go build -gcflags="all=-N -l" -v -ldflags "${LDFLAGS}" -tags strictfipsruntime -o ./dist/argocd ./cmd
+
 
 ARG BUILD_ALL_CLIS=false
 RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
@@ -66,13 +80,14 @@ RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
 
 # build kustomize
 WORKDIR /go/src/github.com/argoproj/kustomize
-RUN go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
--X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -o kustomize ./kustomize
+RUN GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
+-X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+-tags strictfipsruntime -o kustomize ./kustomize/main.go
 
 # build helm
 WORKDIR /go/src/github.com/argoproj/helm
-RUN go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
--X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" ./cmd/helm
+RUN GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
+-X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" -tags strictfipsruntime ./cmd/helm
 
 # build tini
 WORKDIR /go/src/github.com/argoproj/tini
@@ -85,6 +100,14 @@ WORKDIR /go/src/github.com/argoproj/ssh-connect
 RUN yum install -y gcc sed 
 RUN sed -i 's/SOCKLEN_T/socklen_t/g' connect.c 
 RUN gcc -v connect.c -o connect-proxy
+
+# build git-lfs
+WORKDIR /go/src/github.com/argoproj/git-lfs
+RUN GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 \
+ go build -ldflags="-w -s -X 'github.com/git-lfs/git-lfs/v3/config.Vendor=Red Hat Inc' \
+ -X github.com/git-lfs/git-lfs/v3/config.GitCommit=${CI_GIT_LFS_UPSTREAM_TAG}" \
+ -gcflags="" -tags strictfipsruntime -trimpath  -o ./bin/git-lfs ./git-lfs.go
+
 ####################################################################################################
 # Final image
 ####################################################################################################
@@ -102,7 +125,7 @@ RUN groupadd -g 999 argocd && \
     chown argocd:0 /home/argocd && \
     chmod g=u /home/argocd && \
     microdnf update && \
-    microdnf install -y git git-lfs gpg tar tzdata && \
+    microdnf install -y git gpg tar tzdata && \
     microdnf clean all && \
     rm -rf /tmp/* /var/tmp/*
 
@@ -143,8 +166,8 @@ USER 999
 COPY --from=argocd-build  /go/src/github.com/argoproj/kustomize/kustomize /usr/local/bin/
 COPY --from=argocd-build  /go/src/github.com/argoproj/helm/helm /usr/local/bin/
 COPY --from=argocd-build  /go/src/github.com/argoproj/tini/tini /usr/local/bin/
-# TODO: connect-proxy is not copied due to some issue.
-# COPY --from=argocd-build  /go/src/github.com/argoproj/ssh_connect/connect-proxy /usr/local/bin/connect-proxy
+COPY --from=argocd-build  /go/src/github.com/argoproj/ssh-connect/connect-proxy /usr/local/bin/connect-proxy
+COPY --from=argocd-build  /go/src/github.com/argoproj/git-lfs/bin/git-lfs /usr/local/bin/
 
 LABEL \
     name="openshift-gitops-1/argocd-rhel8" \
