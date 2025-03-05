@@ -56,6 +56,7 @@ ARG EXTRA_BUILD_INFO='{Vendor Information: Red Hat OpenShift GitOps version: 1.1
 # Perform the build
 COPY --from=argocd-ui /src/dist/app /go/src/github.com/argoproj/argo-cd/ui/dist/app
 RUN export PACKAGE=github.com/argoproj/argo-cd/v2/common &&\
+export ARGOCD_COMMIT=$(git rev-parse HEAD) &&\
 export VERSION=$(cat VERSION) &&\
 export BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') &&\
 export KUBECTL_VER=$(go list -m k8s.io/client-go | head -n 1 | rev | cut -d' ' -f1 | rev) &&\
@@ -64,11 +65,11 @@ export CGO_ENABLED=1 &&\
 export GODEBUG="tarinsecurepath=0,zipinsecurepath=0" &&\
 export LDFLAGS="-X ${PACKAGE}.version=${VERSION} \
   -X ${PACKAGE}.buildDate=${BUILD_DATE} \
-  -X ${PACKAGE}.gitCommit=${CI_ARGO_CD_UPSTREAM_COMMIT} \
+  -X ${PACKAGE}.gitCommit=${ARGOCD_COMMIT} \
   -X ${PACKAGE}.gitTreeState=clean \
   -X ${PACKAGE}.kubectlVersion=${KUBECTL_VER}\
   -X \"${PACKAGE}.extraBuildInfo=${EXTRA_BUILD_INFO}\" \
-  -X ${PACKAGE}.gitTag=${CI_ARGO_CD_UPSTREAM_TAG}" &&\
+  -X ${PACKAGE}.gitTag=v${VERSION}" &&\
 go build -gcflags="all=-N -l" -v -ldflags "${LDFLAGS}" -tags strictfipsruntime -o ./dist/argocd ./cmd
 
 
@@ -80,14 +81,17 @@ RUN if [ "$BUILD_ALL_CLIS" = "true" ] ; then \
 
 # build kustomize
 WORKDIR /go/src/github.com/argoproj/kustomize
-RUN GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${CI_KUSTOMIZE_UPSTREAM_TAG} \
+RUN  export KUSTOMIZE_TAG=$(git describe --exact-match --tags HEAD 2>/dev/null) &&\
+GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 go build -mod=readonly -buildvcs=true -ldflags="-s -X sigs.k8s.io/kustomize/api/provenance.version=${KUSTOMIZE_TAG} \
 -X sigs.k8s.io/kustomize/api/provenance.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
 -tags strictfipsruntime -o kustomize ./kustomize/main.go
 
 # build helm
 WORKDIR /go/src/github.com/argoproj/helm
-RUN GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${CI_HELM_UPSTREAM_TAG} \
--X helm.sh/helm/v3/internal/version.gitCommit=${CI_HELM_UPSTREAM_COMMIT}" -tags strictfipsruntime ./cmd/helm
+RUN export HELM_COMMIT=$(git rev-parse HEAD) &&\
+export HELM_TAG=$(git describe --exact-match --tags HEAD 2>/dev/null) &&\
+GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 go build -ldflags="-w -s -X helm.sh/helm/v3/internal/version.version=${HELM_TAG} \
+-X helm.sh/helm/v3/internal/version.gitCommit=${HELM_COMMIT}" -tags strictfipsruntime ./cmd/helm
 
 # build tini
 WORKDIR /go/src/github.com/argoproj/tini
@@ -103,9 +107,10 @@ RUN gcc -v connect.c -o connect-proxy
 
 # build git-lfs
 WORKDIR /go/src/github.com/argoproj/git-lfs
-RUN GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 \
+RUN export GITLFS_COMMIT=$(git rev-parse HEAD) &&\
+ GOEXPERIMENT=strictfipsruntime CGO_ENABLED=1 \
  go build -ldflags="-w -s -X 'github.com/git-lfs/git-lfs/v3/config.Vendor=Red Hat Inc' \
- -X github.com/git-lfs/git-lfs/v3/config.GitCommit=${CI_GIT_LFS_UPSTREAM_TAG}" \
+ -X github.com/git-lfs/git-lfs/v3/config.GitCommit=${GITLFS_COMMIT}" \
  -gcflags="" -tags strictfipsruntime -trimpath  -o ./bin/git-lfs ./git-lfs.go
 
 ####################################################################################################
@@ -171,14 +176,11 @@ COPY --from=argocd-build  /go/src/github.com/argoproj/git-lfs/bin/git-lfs /usr/l
 
 LABEL \
     name="openshift-gitops-1/argocd-rhel8" \
-    version=${CI_CONTAINER_VERSION} \
+    version="1.16.0" \
     License="Apache 2.0" \
     com.redhat.component="openshift-gitops-argocd-container" \
     com.redhat.delivery.appregistry="false" \
-    release=${CI_CONTAINER_RELEASE} \
-    upstream-version=${CI_UPSTREAM_VERSION} \
-    upstream-vcs-ref="${CI_ARGO_CD_UPSTREAM_COMMIT}" \
-    upstream-vcs-type="git" \
+    release="1.16.0" \
     summary="Red Hat Openshift GitOps Argo CD" \
     io.openshift.expose-services="" \
     io.openshift.tags="openshift,gitops,argocd" \
